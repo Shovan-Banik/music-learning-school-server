@@ -47,6 +47,7 @@ async function run() {
     await client.connect();
 
     const usersCollection=client.db('musicSchoolDB').collection('Users');
+    const classCollection=client.db('musicSchoolDB').collection('classes');
 
 
     app.post('/jwt',(req,res)=>{
@@ -61,9 +62,20 @@ async function run() {
 
     const verifyAdmin= async(req,res,next)=>{
       const email=req.decoded.email;
-      const query={email: email}
+      const query={userEmail: email}
       const user= await usersCollection.findOne(query);
       if(user?.role !== 'admin'){
+        return res.status(403).send({ error: true, message: 'forbidden message' });
+      }
+      next();
+    }
+
+    
+    const verifyInstructor= async(req,res,next)=>{
+      const email=req.decoded.email;
+      const query={userEmail: email}
+      const user= await usersCollection.findOne(query);
+      if(user?.role !== 'instructor'){
         return res.status(403).send({ error: true, message: 'forbidden message' });
       }
       next();
@@ -83,6 +95,7 @@ async function run() {
       const result=await usersCollection.find().toArray();
       res.send(result);
     })
+    
 
     app.post('/users',async(req,res)=>{
       const body=req.body;
@@ -92,6 +105,17 @@ async function run() {
         return res.send({message: 'user already exists'});
       }
       const result= await usersCollection.insertOne(body);
+      res.send(result);
+    })
+
+    app.get('/users/admin/:email',async(req,res)=>{
+      const email=req.params.email;
+      if(req.decoded.email !==email){
+        res.send({admin:false})
+      }
+      const query={userEmail:email};
+      const user=await usersCollection.findOne(query);
+      const result={admin:user?.role==='admin'}
       res.send(result);
     })
 
@@ -110,6 +134,13 @@ async function run() {
 
     })
 
+    app.get('/instructor',async(req,res)=>{
+      const result= await usersCollection.find({role:'instructor'}).toArray();
+      res.send(result);
+    })
+
+
+
     app.patch('/users/instructor/:id', async (req, res) => {
       const id = req.params.id;
       console.log(id);
@@ -123,6 +154,21 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
 
+    })
+
+    // class related api
+
+    app.get('/classes/:email',async(req,res)=>{
+      const email=req.params.email;
+      const query={instructorEmail:email};
+      const result= await classCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.post('/classes',async(req,res)=>{
+       const newClass=req.body;
+       const result=await classCollection.insertOne(newClass);
+       res.send(result);
     })
 
 
