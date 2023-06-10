@@ -1,9 +1,10 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+require('dotenv').config();
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-require('dotenv').config();
 const port = process.env.Port || 5000;
 
 // middleware
@@ -49,11 +50,12 @@ async function run() {
     const usersCollection = client.db('musicSchoolDB').collection('Users');
     const classCollection = client.db('musicSchoolDB').collection('classes');
     const cartCollection = client.db('musicSchoolDB').collection('carts');
+    const paymentCollection = client.db('musicSchoolDB').collection('payments');
 
 
     app.post('/jwt', (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '2h' })
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '6h' })
 
       res.send({ token })
     })
@@ -230,30 +232,65 @@ async function run() {
 
     // cart collection
 
-    app.get('/carts',async(req,res)=>{
-      const email=req.query.email;
-      if(!email){
+    app.get('/carts', async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
         res.send([]);
       }
-      const query={email:email};
-      const result=await cartCollection.find(query).toArray();
+      const query = { email: email };
+      const result = await cartCollection.find(query).toArray();
       res.send(result);
     })
 
-
-    app.post('/carts',async(req,res)=>{
-      const selectedClass=req.body;
+    app.post('/carts', async (req, res) => {
+      const selectedClass = req.body;
       console.log(selectedClass);
-      const result=await cartCollection.insertOne(selectedClass);
+      const result = await cartCollection.insertOne(selectedClass);
       res.send(result);
     })
 
-    app.delete('/carts/:id',async(req,res)=>{
-      const id= req.params.id;
-      const query={_id: new ObjectId(id)};
-      const result=await cartCollection.deleteOne(query);
+    app.delete('/carts/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.deleteOne(query);
       res.send(result);
     })
+
+
+    app.get('/carts/:id',async(req,res)=>{
+      const id=req.params.id;
+      const query={_id: new ObjectId(id)};
+      const result=await cartCollection.findOne(query);
+      res.send(result);
+    })
+
+    // payment api
+
+    app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    })
+
+    app.post('/payments', verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      // const query = { _id: { $in: payment.cartItems.map(id => new ObjectId(id)) } }
+      // const deleteResult = await cartCollection.deleteMany(query)
+
+      // res.send({ insertResult, deleteResult });
+      res.send(insertResult);
+    })
+    
 
 
 
