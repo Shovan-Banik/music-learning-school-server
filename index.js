@@ -48,6 +48,7 @@ async function run() {
 
     const usersCollection = client.db('musicSchoolDB').collection('Users');
     const classCollection = client.db('musicSchoolDB').collection('classes');
+    const cartCollection = client.db('musicSchoolDB').collection('carts');
 
 
     app.post('/jwt', (req, res) => {
@@ -226,6 +227,14 @@ async function run() {
         res.status(500).json({ error: 'An error occurred while updating the feedback.' });
       }
     });
+
+    // cart collection
+    app.post('/carts',async(req,res)=>{
+      const selectedClass=req.body;
+      console.log(selectedClass);
+      const result=await cartCollection.insertOne(selectedClass);
+      res.send(result);
+    })
 
 
 
