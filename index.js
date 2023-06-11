@@ -86,21 +86,7 @@ async function run() {
 
     // user related api
 
-    app.get('/classes/popular', async (req, res) => {
-      try {
-        const popularClasses = await classCollection
-          .find()
-          .sort({ 'enrolledStudents': -1 })
-          .limit(6)
-          .toArray();
-    
-        res.json(popularClasses);
-      } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'An error occurred while retrieving the popular classes.' });
-      }
-    });
-
+   
 
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
@@ -130,7 +116,7 @@ async function run() {
       const result = await usersCollection.find({ role: 'instructor' }).toArray();
       res.send(result);
     })
-    
+
     app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
       if (req.decoded.email !== email) {
@@ -192,6 +178,12 @@ async function run() {
       const result = await classCollection.find(query).toArray();
       res.send(result);
     })
+
+    app.get('/classes/popular', async (req, res) => {
+      const popularClasses = await classCollection.find({ status: 'approved' }).sort({ 'enrolledStudents': -1 }).limit(6).toArray();
+      res.json(popularClasses);
+  });
+
 
     app.post('/classes', async (req, res) => {
       const newClass = req.body;
@@ -308,8 +300,21 @@ async function run() {
 
     app.post('/payments', verifyJWT, async (req, res) => {
       const payment = req.body;
-      const result = await paymentCollection.insertOne(payment);
-      res.send(result);
+      const insertResult = await paymentCollection.insertOne(payment);
+
+      const filter={_id:payment.selectedClassId};
+      const update={
+        $inc:{
+          enrolledStudents:1
+        }
+      };
+
+      const addingResult=await classCollection.updateOne(filter,update);
+      
+      const query={_id: new ObjectId(payment.cart_id)};
+      const deleteResult=await cartCollection.deleteOne(query);
+      
+      res.send({result:insertResult,deleteResult});
     })
 
 
