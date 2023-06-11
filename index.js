@@ -84,8 +84,9 @@ async function run() {
       next();
     }
 
-    // user related api
+   
 
+    // user related api
 
 
     app.get('/users/:email', async (req, res) => {
@@ -116,6 +117,11 @@ async function run() {
       const result = await usersCollection.find({ role: 'instructor' }).toArray();
       res.send(result);
     })
+    // popular instructor
+    app.get('/user-popularInstructor', async (req, res) => {
+      const result = await usersCollection.find({ role: 'instructor' }).limit(6).toArray();
+      res.send(result);
+    })
 
     app.get('/users/admin/:email', async (req, res) => {
       const email = req.params.email;
@@ -128,7 +134,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/users/admin/:id', async (req, res) => {
+    app.patch('/users/admin/:id',verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -145,7 +151,7 @@ async function run() {
 
 
 
-    app.patch('/users/instructor/:id', async (req, res) => {
+    app.patch('/users/instructor/:id',verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -172,26 +178,29 @@ async function run() {
     })
 
 
-    app.get('/classes/:email', async (req, res) => {
-      const email = req.params.email;
-      const query = { instructorEmail: email };
-      const result = await classCollection.find(query).toArray();
-      res.send(result);
-    })
-
+    // special api (i don't know why)
     app.get('/classes/popular', async (req, res) => {
       const popularClasses = await classCollection.find({ status: 'approved' }).sort({ 'enrolledStudents': -1 }).limit(6).toArray();
       res.json(popularClasses);
     });
 
 
-    app.post('/classes', async (req, res) => {
+    app.get('/classes/:email',verifyJWT,verifyInstructor, async (req, res) => {
+      const email = req.params.email;
+      const query = { instructorEmail: email };
+      const result = await classCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    
+
+    app.post('/classes',verifyJWT,verifyInstructor, async (req, res) => {
       const newClass = req.body;
       const result = await classCollection.insertOne(newClass);
       res.send(result);
     })
 
-    app.patch('/classes/approve/:id', async (req, res) => {
+    app.patch('/classes/approve/:id',verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -204,7 +213,7 @@ async function run() {
       res.send(result);
 
     })
-    app.patch('/classes/deny/:id', async (req, res) => {
+    app.patch('/classes/deny/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
@@ -219,7 +228,7 @@ async function run() {
     })
 
 
-    app.patch('/classes/feedback/:id', async (req, res) => {
+    app.patch('/classes/feedback/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const { feedback } = req.body;
 
@@ -253,14 +262,14 @@ async function run() {
       res.send(result);
     })
 
-    app.post('/carts', async (req, res) => {
+    app.post('/carts',verifyJWT, async (req, res) => {
       const selectedClass = req.body;
       console.log(selectedClass);
       const result = await cartCollection.insertOne(selectedClass);
       res.send(result);
     })
 
-    app.delete('/carts/:id', async (req, res) => {
+    app.delete('/carts/:id',verifyJWT, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await cartCollection.deleteOne(query);
@@ -291,14 +300,14 @@ async function run() {
       })
     })
 
-    app.get('/payment/:email', async (req, res) => {
+    app.get('/payment/:email',verifyJWT, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
     })
 
-    app.get('/paymentHistory/:id', async (req, res) => {
+    app.get('/paymentHistory/:id',verifyJWT, async (req, res) => {
       const id = req.params.id;
       console.log(id);
       const query = { userId: id };
@@ -327,10 +336,7 @@ async function run() {
 
       res.send({ result: insertResult, deleteResult });
     })
-
-
-
-
+    
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
