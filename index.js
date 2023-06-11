@@ -86,7 +86,7 @@ async function run() {
 
     // user related api
 
-   
+
 
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
@@ -182,7 +182,7 @@ async function run() {
     app.get('/classes/popular', async (req, res) => {
       const popularClasses = await classCollection.find({ status: 'approved' }).sort({ 'enrolledStudents': -1 }).limit(6).toArray();
       res.json(popularClasses);
-  });
+    });
 
 
     app.post('/classes', async (req, res) => {
@@ -298,23 +298,34 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/paymentHistory/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { userId: id };
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    })
+
     app.post('/payments', verifyJWT, async (req, res) => {
       const payment = req.body;
+
+      // insert to payment collection
       const insertResult = await paymentCollection.insertOne(payment);
 
-      const filter={_id:payment.selectedClassId};
-      const update={
-        $inc:{
-          enrolledStudents:1
+      // update enrolled student in class collection
+      const filter = { _id: new ObjectId(payment.selectedClassId) };
+      const update = {
+        $inc: {
+          enrolledStudents: 1
         }
       };
 
-      const addingResult=await classCollection.updateOne(filter,update);
-      
-      const query={_id: new ObjectId(payment.cart_id)};
-      const deleteResult=await cartCollection.deleteOne(query);
-      
-      res.send({result:insertResult,deleteResult});
+      const addingResult = await classCollection.updateOne(filter, update);
+    //  delete from selected class
+      const query = { _id: new ObjectId(payment.cart_id) };
+      const deleteResult = await cartCollection.deleteOne(query);
+
+      res.send({ result: insertResult, deleteResult });
     })
 
 
