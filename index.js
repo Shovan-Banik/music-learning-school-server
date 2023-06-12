@@ -252,7 +252,6 @@ async function run() {
 
     app.post('/carts',verifyJWT, async (req, res) => {
       const selectedClass = req.body;
-      console.log(selectedClass);
       const result = await cartCollection.insertOne(selectedClass);
       res.send(result);
     })
@@ -297,7 +296,6 @@ async function run() {
 
     app.get('/paymentHistory/:id',verifyJWT, async (req, res) => {
       const id = req.params.id;
-      console.log(id);
       const query = { userId: id };
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
