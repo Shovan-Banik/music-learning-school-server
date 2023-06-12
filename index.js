@@ -298,7 +298,7 @@ async function run() {
       const id = req.params.id;
       const query = { userId: id };
       const result = await paymentCollection.find(query).toArray();
-      res.send(result);
+      res.send(result.reverse);
     })
 
     app.post('/payments', verifyJWT, async (req, res) => {
