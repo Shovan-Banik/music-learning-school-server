@@ -45,7 +45,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const usersCollection = client.db('musicSchoolDB').collection('Users');
     const classCollection = client.db('musicSchoolDB').collection('classes');
@@ -84,11 +84,7 @@ async function run() {
       next();
     }
 
-   
-
     // user related api
-
-
     app.get('/users/:email', async (req, res) => {
       const email = req.params.email;
       const query = { userEmail: email };
@@ -96,7 +92,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/allUsers', async (req, res) => {
+    app.get('/allUsers',verifyJWT,verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     })
@@ -148,9 +144,6 @@ async function run() {
 
     })
 
-
-
-
     app.patch('/users/instructor/:id',verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
@@ -191,8 +184,6 @@ async function run() {
       const result = await classCollection.find(query).toArray();
       res.send(result);
     })
-
-    
 
     app.post('/classes',verifyJWT,verifyInstructor, async (req, res) => {
       const newClass = req.body;
@@ -246,9 +237,6 @@ async function run() {
         res.status(500).json({ error: 'An error occurred while updating the feedback.' });
       }
     });
-
-
-
 
     // cart collection
 
@@ -336,7 +324,7 @@ async function run() {
 
       res.send({ result: insertResult, deleteResult });
     })
-    
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
